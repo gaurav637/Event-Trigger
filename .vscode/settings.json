@@ -1,0 +1,36 @@
+{
+    "cSpell.words": [
+        "asgi",
+        "asgiref",
+        "Cloudinary",
+        "corsheaders",
+        "deregistration",
+        "DJOSER",
+        "dotenv",
+        "filterset",
+        "hypercorn",
+        "KEEPALIVE",
+        "levelname",
+        "mosquitto",
+        "mqtt",
+        "openapi",
+        "paho",
+        "redoc",
+        "roomtype",
+        "simplejwt",
+        "tinymce",
+        "userdata",
+        "uvicorn",
+        "viewsets",
+        "whitenoise"
+    ],
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.formatting.provider": "black",
+    "editor.formatOnSave": true,
+    "python.linting.pylintArgs": [
+        "--load-plugins",
+        "pylint_django",
+        "--django-settings-module=EventTrigger.settings"
+    ]
+}

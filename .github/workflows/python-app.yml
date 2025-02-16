@@ -1,0 +1,106 @@
+---
+name: Event-Trigger-Application
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+  push:
+    branches: ["staging"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.11"
+
+      - name: Cache Dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            echo "No requirements.txt found. Skipping dependencies installation."
+          fi
+  merge-to-main:
+    needs: build
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for all branches
+          ref: staging # Explicitly checkout staging branch
+
+      - name: Merge Staging into Main
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Fetch all branches
+          git fetch origin
+
+          # Create main branch if it doesn't exist
+          if ! git show-ref --quiet refs/remotes/origin/main; then
+            git checkout -b main
+            git push -u origin main
+          else
+            git checkout main
+          fi
+
+          # Merge staging into main
+          git merge staging --no-ff -m "Auto-merged staging into main"
+          git push origin main
+
+      - name: Send Email Notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+            server_address: smtp.gmail.com
+            server_port: 587
+            secure: false
+            username: ${{ secrets.GMAIL_USERNAME }}
+            password: ${{ secrets.GMAIL_APP_PASSWORD }}
+            from: ${{ secrets.SENDER_EMAIL }}
+            to: ${{ secrets.RECIPIENT_EMAIL }}
+            subject: "Merge Successful: Staging → Main"
+            html_body: |
+              <h2>Deployment Notification</h2>
+              <p>The latest changes from staging have been successfully merged into main.</p>
+              <ul>
+                <li><strong>Repository:</strong> ${{ github.repository }}</li>
+                <li><strong>Workflow:</strong> ${{ github.workflow }}</li>
+                <li><strong>Triggered by:</strong> ${{ github.actor }}</li>
+                <li><strong>Time:</strong> ${{ github.event.head_commit.timestamp }}</li>
+              </ul>
